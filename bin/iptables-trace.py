@@ -141,7 +141,21 @@ def trace_cb(gh, nfmsg, nfa, data):
 			targetname = bcolors.next(rule.target.name)
 		x += "\n\t\t=> {} {}".format(targetname, tp)
 	elif type == 'return':
-		x = "return"
+		# unconditional rule having the default policy of the calling chain get named "return"
+		# net/ipv4/netfilter/ip_tables.c
+		# get_chainname_rulenum
+		try:
+				r += "(#{r}) ".format(r=rulenum.strip())
+				rule = chain.rules[int(rulenum)-1]
+				if rule.target.name == 'ACCEPT':
+						targetname = bcolors.ok(rule.target.name)
+				elif rule.target.name in ('REJECT','DROP'):
+						targetname = bcolors.fail(rule.target.name)
+				else:
+						targetname = bcolors.next(rule.target.name)
+				x = "=> {}".format(targetname)
+		except Exception as e:
+				x = "return"
 
 	print("{}\n\t\t{}".format(r,x))
 	return 0
