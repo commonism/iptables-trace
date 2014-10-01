@@ -92,24 +92,10 @@ def trace_cb(gh, nfmsg, nfa, data):
 	table = iptc.Table(tablename)
 	chain = iptc.Chain(table, chainname)
 	pkt = nfa.payload
-#	h3 = iphdr.from_buffer(pkt)
-#	
-#	if tablename == 'raw' and chainname in ('PREROUTING','OUTPUT'):
-#		print("{} {} {} {} -> {}".format(h3.ip_hl, h3.version, h3.protocol, h3.src, h3.dst))
-#		if h3.protocol == socket.IPPROTO_TCP:
-#			h4 = tcphdr.from_buffer(pkt, h3.off)
-#			print("tcp {} -> {}".format(h4.src, h4.dst))
-#		elif h3.protocol == socket.IPPROTO_UDP:
-#			h4 = udphdr.from_buffer(pkt, h3.off)
-#			print("udp {} -> {}".format(h4.src, h4.dst))
-#		elif h3.protocol == socket.IPPROTO_ICMP:
-#			h4 = icmphdr.from_buffer(pkt, h3.off)
-#			print("icmp {}:{}".format(h4.type, h4.code))
-#		else:
-#			return
+
 	if tablename == 'raw' and chainname in ('PREROUTING','OUTPUT'):
 		print(nf_log(pkt, nfa.indev, nfa.outdev))
-	
+
 	r = "\t{} {} ".format(tablename,chainname)
 	if type == 'policy':
 		x = chain.get_policy().name
