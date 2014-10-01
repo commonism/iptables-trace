@@ -84,7 +84,6 @@ def trace_cb(gh, nfmsg, nfa, data):
 	if not prefix.startswith('TRACE: '):
 		return 0
 
-
 	# chainname may have :, therefore split and re-create chainname
 	p = prefix[7:].split(":")
 	tablename,chainname,type,rulenum = [p[0], ':'.join(p[1:-2]), p[-2], p[-1]]
@@ -153,16 +152,16 @@ def main():
 	import random
 
 	parser = argparse.ArgumentParser(description='iptables-trace')
-	
+
 	parser.add_argument('--clear-chain', action='store_true', default=False, help="delete all rules in the chain")
 	parser.add_argument('--chain','-c', type=str, nargs='*', choices=['OUTPUT','PREROUTING'], default=["OUTPUT",'PREROUTING'], help='chain')
 	parser.add_argument('--source','-s', type=str, action='store', default=None, help='source')
 	parser.add_argument('--destination','-d', type=str, action='store', default=None, help='destination')
-	parser.add_argument('--protocol', '-p', type=str, action='store', default=None, help='protocol')	
+	parser.add_argument('--protocol', '-p', type=str, action='store', default=None, help='protocol')
 	parser.add_argument('--bpf',type=str, default=None, action='store')
 	parser.add_argument('--xmark-mask', '-M', type=str, action='store', default="0x800001ff", help='mark mask (bits to use) default is not to use lower 9 bits and the highest')
 	parser.add_argument("--limit", action='store_true', default=False, help="limit rule matches to 1/second")
-	
+
 	args = parser.parse_args()
 	print(args)
 
@@ -196,7 +195,7 @@ def main():
 			limit = mark.create_match('limit')
 			limit.limit = "1/second"
 			limit.limit_burst = "1"
-		
+
 		mark.target = iptc.Target(mark, "MARK")
 		m = 0
 		while m == 0:
