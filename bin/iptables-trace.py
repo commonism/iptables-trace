@@ -9,7 +9,7 @@ import iptc
 from libnetfilter.log import nflog_handle
 from libnetfilter.netlink import nf_log
 
-  
+
 running = True
 def signal_handler(signal, frame):
 	global running
@@ -17,7 +17,36 @@ def signal_handler(signal, frame):
 signal.signal(signal.SIGINT, signal_handler)
 
 def nfbpf_compile(pattern):
-	from bpf import libpcap, bpf_program
+	import ctypes.util
+
+	class _bpf_insn(ctypes.Structure):
+		_fields_ = [
+			("code",ctypes.c_short),
+			("jt",ctypes.c_uint8),
+			("jf",ctypes.c_uint8),
+			("k",ctypes.c_uint32)
+		]
+
+	class bpf_program(ctypes.Structure):
+		_fields_ = [
+			("bf_len", ctypes.c_int),
+			("bf_insns", ctypes.POINTER(bpf_insn))
+		]
+
+	_LP_bpf_program = ctypes.POINTER(bpf_program)
+
+	libpcap = ctypes.CDLL(ctypes.util.find_library("pcap"))
+
+	def pcap_compile_nopcap_errcheck(result, function, args):
+		if result == -1:
+			raise ValueError(args)
+
+	# int pcap_compile_nopcap(int snaplen, int linktype, struct bpf_program *fp, char *str, int optimize, bpf_uint32 netmask);
+	libpcap.pcap_compile_nopcap.restype = ctypes.c_int
+	libpcap.pcap_compile_nopcap.argtypes = [ctypes.c_int, ctypes.c_int, _LP_bpf_program, ctypes.c_char_p, ctypes.c_int, ctypes.c_uint32]
+	libpcap.pcap_compile_nopcap.errcheck = pcap_compile_nopcap_errcheck
+
+
 	buf = ctypes.c_char_p(pattern)
 	optimize = ctypes.c_int(1)
 	mask = ctypes.c_int(0xffffffff)
@@ -28,7 +57,6 @@ def nfbpf_compile(pattern):
 		raise ValueError("bpf: number of instructions exceeds maximum")
 	r = "{:d}, ".format(program.bf_len)
 	r += ", ".join(["{i.code} {i.jt} {i.jf} {i.k}".format(i=program.bf_insns[i]) for i in range(program.bf_len)])
-	print(r)
 	return r
 
 
