@@ -1,3 +1,5 @@
+#!/usr/bin/python
+
 # pip install python-iptables
 import socket
 import select
