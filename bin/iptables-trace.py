@@ -81,6 +81,15 @@ class bcolors:
 		return bcolors.OKBLUE + data + bcolors.ENDC
 
 
+def format_parameters(args):
+	r = {}
+	for k,v in args.items():
+		if type(v) == str:
+			r[k] = v
+		else:
+			r[k] = " ".join(v)
+	return str(r)
+
 def trace_cb(gh, nfmsg, nfa, data):
 	prefix = nfa.prefix
 	if not prefix.startswith('TRACE: '):
@@ -110,13 +119,13 @@ def trace_cb(gh, nfmsg, nfa, data):
 		x = "{r.protocol} {r.src} -> {r.dst} ".format(r=rule)
 		for m in rule.matches:
 			if m.name == 'comment':
-				r += "/* {} */".format(m.get_all_parameters()['comment'])
+				r += "/* {} */".format(m.get_all_parameters()['comment'][0])
 			else:
-				x += "{}:{} ".format(m.name,m.get_all_parameters().__str__())
+				x += "{}:{} ".format(m.name, format_parameters(m.get_all_parameters()))
 
 		tp = rule.target.get_all_parameters()
 		if len(tp) > 0:
-			tp = str(tp)
+			tp = format_parameters(tp)
 		else:
 			tp = ""
 
