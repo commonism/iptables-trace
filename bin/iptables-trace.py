@@ -12,6 +12,34 @@ from libnetfilter.log import nflog_handle
 from libnetfilter.netlink import nf_log
 
 
+# monkey patch as the std version breaks with inverted values
+def _get_all_parameters(self):
+	import shlex
+	params = {}
+	ip = self.rule.get_ip()
+	buf = self._get_saved_buf(ip)
+	if buf is None:
+		return params
+	res = shlex.split(buf)
+	res.reverse()
+	values = []
+	key = None
+	while len(res) > 0:
+		x = res.pop()
+		if x.startswith('--'): # This is a parameter name.
+			values.append(x[2:])
+			key = " ".join(values)
+			params[key] = []
+			continue
+		if key:
+			params[key].append(x) # This is a parameter value.
+		else:   
+			values.append(x)
+	return params
+
+iptc.ip4tc.IPTCModule.get_all_parameters = _get_all_parameters
+
+
 running = True
 def signal_handler(signal, frame):
 	global running
