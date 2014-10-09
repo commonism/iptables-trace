@@ -1,0 +1,187 @@
+        iptables-trace
+
+This software allows tracing a packet through the linux kernels netfilter 
+tables.
+It is meant to assist in debugging and writing iptables rules.
+
+ INSTALLATION
+
+Install 
+  * python-libnetfilter
+  * libnetfilter-log
+  * python-iptables
+and run iptables-trace
+    
+ OPERATION
+iptables-trace is rather limited in the arguments you can provide.
+If possible (supported by kernel) use --bpf, --bpf "host example.org" will 
+trace packets in both directions, which is currently not possible using --source or --destination.
+--limit can be used to limit the amount of traced packets to 1 packet per second.
+
+
+ GUTS
+iptables-trace creates additional rules in the raw table.
+These rules are used to set a TRACE target on packets you are interested in.
+The logging of these TRACE messages is retrieved using libnetfilter_log.
+By parsing the TRACE messages, the table, chain and action is retrieved.
+python-iptables is used to lookup the iptables rule and format it for display.
+The rules in the raw table are deleted upon program exit.
+
+
+ EXAMPLES
+On a router/firewall, a typical output will look like this:
+
+IN=vif2 OUT= SRC=1.1.1.1 DST=2.2.2.2 LEN=60 TOS=0x00 PREC=0x00 TTL=43 ID=4997 PROTO=TCP SPT=34419 DPT=22
+        raw PREROUTING
+                ACCEPT
+        mangle PREROUTING
+                ACCEPT
+        nat PREROUTING
+                ACCEPT
+        mangle FORWARD
+                ACCEPT
+        filter FORWARD (#31)
+                ip 0.0.0.0/0.0.0.0 -> 0.0.0.0/0.0.0.0 set:{'match-set': 'profile:server-terminal dst'}
+                => server-terminal:filter
+        filter server-terminal:filter (#8)
+                tcp 0.0.0.0/0.0.0.0 -> 0.0.0.0/0.0.0.0 mark:{'! mark': '0x100/0x100'} tcp:{'dport': '22'}
+                => ACCEPT
+        mangle POSTROUTING
+                ACCEPT
+        nat POSTROUTING
+                ACCEPT
+
+You can see all matching rules for the packet and the actions taken.
+In case of NAT, you'll see the modifications to the packet in nat/POSTROUTING.
+
+
+IN=vif0 OUT= SRC=10.5.1.7 DST=1.1.1.1 LEN=84 TOS=0x00 PREC=0x00 TTL=61 ID=48889 PROTO=ICMP TYPE=8 CODE=0 
+        raw PREROUTING 
+                ACCEPT
+        mangle PREROUTING (#4) 
+                ip 10.0.0.0/255.0.0.0 -> 0.0.0.0/0.0.0.0 
+                => MARK {'set-xmark': '0x100/0x100'}
+        mangle PREROUTING (#11) 
+                ip 0.0.0.0/0.0.0.0 -> 0.0.0.0/0.0.0.0 mark:{'mark': '0x100/0x100'} set:{'match-set': 'profile:client-normal src'} 
+                => client-normal:mangle 
+        mangle client-normal:mangle (#1) 
+                return
+        mangle PREROUTING 
+                ACCEPT
+        nat PREROUTING 
+                ACCEPT
+        mangle FORWARD 
+                ACCEPT
+        filter FORWARD (#12) 
+                ip 0.0.0.0/0.0.0.0 -> 0.0.0.0/0.0.0.0 set:{'match-set': 'profile:client-normal src'} 
+                => client-normal:filter 
+        filter client-normal:filter (#10) /* allow icmp */
+                icmp 0.0.0.0/0.0.0.0 -> 0.0.0.0/0.0.0.0 mark:{'mark': '0x100/0x100'} 
+                => ACCEPT 
+        mangle POSTROUTING 
+                ACCEPT
+        nat POSTROUTING (#6) 
+                ip 10.5.1.0/255.255.255.0 -> 0.0.0.0/0.0.0.0 
+                => SNAT {'to-source random persistent': '', 'to-source': '2.2.2.2-2.2.2.3', 'to-source random': ''}
+
+
+In case a fwmarks are used for routing decisions, you can see the iptables setting the mark:
+
+IN=vif0 OUT= SRC=1.1.1.1 DST=2.2.2.2 LEN=40 TOS=0x00 PREC=0x00 TTL=61 ID=58730 PROTO=TCP SPT=45331 DPT=80 
+        raw PREROUTING 
+                ACCEPT
+        mangle PREROUTING (#3) 
+                ip 1.1.0.0/255.255.0.0 -> 0.0.0.0/0.0.0.0 
+                => MARK {'set-xmark': '0x100/0x100'}
+        mangle PREROUTING (#10) 
+                ip 0.0.0.0/0.0.0.0 -> 0.0.0.0/0.0.0.0 mark:{'mark': '0x100/0x100'} set:{'match-set': 'profile:client-restricted src'} 
+                => client-restricted:mangle 
+        mangle client-restricted:mangle (#1) /* proxy mark */
+                tcp 0.0.0.0/0.0.0.0 -> 0.0.0.0/0.0.0.0 mark:{'mark': '0x100/0x100'} tcp:{'dport': '80'} 
+                => MARK {'set-xmark': '0x1/0x1'}
+        mangle client-restricted:mangle (#2) 
+                return
+        mangle PREROUTING 
+                ACCEPT
+        mangle FORWARD 
+                ACCEPT
+        filter FORWARD (#1) 
+                ip 0.0.0.0/0.0.0.0 -> 0.0.0.0/0.0.0.0 state:{'state': 'RELATED,ESTABLISHED'} 
+                => ACCEPT 
+        mangle POSTROUTING 
+                ACCEPT
+
+
+
+But it can assist in writing local rules as well.
+
+
+Not considering tunnels, a packet will traverse the filters/chains as outlined in the simplified diagram:
+
+ +----------------------+                              +------------------------+
+ | NETWORK INTERFACE    |                              | NETWORK INTERFACE      |
+ +----------+-----------+                              +------------------------+
+            |                                                     ^             
+            |                                                     |              
+            |                                                     |              
+            v                                                     |              
+ +----------------------+                                         |
+ | PREROUTING           |                                         |  
+ +----------------------+                                         |  
+ |                      |                                         |  
+ | +------------------+ |                                         |  
+ | | raw              | |                                         |  
+ | +--------+---------+ |                                         |  
+ |          v           |                                         |  
+ | +------------------+ |                              +----------+-------------+ 
+ | | conn. tracking   | |                              | POSTROUTING            | 
+ | +--------+---------+ |                              +------------------------+ 
+ |          v           |                              |                        | 
+ | +------------------+ |                              | +--------------------+ | 
+ | | mangle           | |                              | | source NAT         | | 
+ | +--------+---------+ |                              | +--------------------+ | 
+ |          v           |                              |          ^             | 
+ | +------------------+ |                              | +--------+-----------+ | 
+ | | destination NAT  | |                              | | mangle             | | 
+ | +------------------+ |                              | +--------------------+ | 
+ +----------+-----------+  +------------------------+  +------------------------+ 
+            |              | FORWARD                |             ^
+            |              +------------------------+             |
+            v              |                        |             |
+     +-------------+       | +--------+  +--------+ |             |
+     | QOS ingress +------>| | mangle +->| filter | |------------>+
+     +------+------+       | +--------+  +--------+ |             |
+            |              |                        |             |
+            |              +------------------------+             |
+            |                                                     |
+            |                                                     |
+            v                                                     |
+ +----------------------+                              +----------+-------------+          
+ | INPUT                |                              | OUTPUT                 |          
+ +----------------------+                              +------------------------+          
+ |                      |                              |                        |          
+ |  +----------------+  |                              |  +------------------+  |          
+ |  | mangle         |  |                              |  | filter           |  |          
+ |  +-------+--------+  |                              |  +------------------+  |          
+ |          v           |                              |          ^             |          
+ |  +----------------+  |                              |  +-------+----------+  |          
+ |  | filter         |  |                              |  | destination NAT  |  |          
+ |  +----------------+  |                              |  +------------------+  |          
+ +----------+-----------+                              |          ^             |          
+            |                                          |  +-------+----------+  |          
+            |                                          |  | mangle           |  |          
+            |                                          |  +------------------+  |          
+            |                                          |          ^             |          
+            |                                          |  +-------+----------+  |          
+            |                                          |  | conn. tracking   |  |          
+            |                                          |  +------------------+  |          
+            |                                          |          ^             |          
+            |                                          |  +-------+----------+  |          
+            |                                          |  | raw              |  |          
+            |                                          |  +------------------+  |          
+            |                                          +------------------------+          
+            v                                                     ^                 
++---------------------------------------------------------------- +-------------+          
+|                              LOCAL PROCESS                                    |          
++-------------------------------------------------------------------------------+          
+
