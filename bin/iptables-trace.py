@@ -60,7 +60,7 @@ def nfbpf_compile(pattern):
 	class bpf_program(ctypes.Structure):
 		_fields_ = [
 			("bf_len", ctypes.c_int),
-			("bf_insns", ctypes.POINTER(bpf_insn))
+			("bf_insns", ctypes.POINTER(_bpf_insn))
 		]
 
 	_LP_bpf_program = ctypes.POINTER(bpf_program)
@@ -79,7 +79,7 @@ def nfbpf_compile(pattern):
 
 	buf = ctypes.c_char_p(pattern)
 	optimize = ctypes.c_int(1)
-	mask = ctypes.c_int(0xffffffff)
+	mask = ctypes.c_uint32(0xffffffff)
 	program = bpf_program()
 	DLT_RAW = 12
 	libpcap.pcap_compile_nopcap(40, DLT_RAW, ctypes.byref(program), buf, optimize, mask)
