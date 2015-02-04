@@ -181,6 +181,8 @@ def trace_cb(gh, nfmsg, nfa, data):
 		except Exception as e:
 				x = "return"
 
+	r += "NFMARK=0x{:x} (0x{:x})".format(nfa.nfmark & data, nfa.nfmark)
+
 	print("{}\n\t\t{}".format(r,x))
 	return 0
 
@@ -258,7 +260,7 @@ def main():
 	qh = n.bind_group(0)
 	qh.set_mode(0x02, 0xffff)
 
-	qh.callback_register(trace_cb, None);
+	qh.callback_register(trace_cb, int(args.xmark_mask, 16));
 
 	fd = n.fd
 
