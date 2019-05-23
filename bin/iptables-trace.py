@@ -235,7 +235,7 @@ def main():
 		if args.limit:
 			limit = mark.create_match('limit')
 			limit.limit = "1/second"
-			limit.limit_burst = "1"
+#			limit.limit_burst = "1"
 
 		mark.target = iptc.Target(mark, "MARK")
 		m = 0
