@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 
 # pip install python-iptables
 import socket
@@ -20,7 +20,7 @@ def _get_all_parameters(self):
 	buf = self._get_saved_buf(ip)
 	if buf is None:
 		return params
-	res = shlex.split(buf)
+	res = shlex.split(buf.decode('ascii'))
 	res.reverse()
 	values = []
 	key = None
@@ -33,7 +33,7 @@ def _get_all_parameters(self):
 			continue
 		if key:
 			params[key].append(x) # This is a parameter value.
-		else:   
+		else:
 			values.append(x)
 	return params
 
@@ -77,7 +77,7 @@ def nfbpf_compile(pattern):
 	libpcap.pcap_compile_nopcap.errcheck = pcap_compile_nopcap_errcheck
 
 
-	buf = ctypes.c_char_p(pattern)
+	buf = ctypes.c_char_p(pattern.encode('ascii'))
 	optimize = ctypes.c_int(1)
 	mask = ctypes.c_uint32(0xffffffff)
 	program = bpf_program()
@@ -119,7 +119,7 @@ def format_parameters(args):
 	return str(r)
 
 def trace_cb(gh, nfmsg, nfa, data):
-	prefix = nfa.prefix
+	prefix = nfa.prefix.decode('ascii')
 	if not prefix.startswith('TRACE: '):
 		return 0
 
