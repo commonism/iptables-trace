@@ -199,9 +199,9 @@ def main():
 	parser.add_argument('--source','-s', type=str, action='store', default=None, help='source')
 	parser.add_argument('--destination','-d', type=str, action='store', default=None, help='destination')
 	parser.add_argument('--protocol', '-p', type=str, action='store', default=None, help='protocol')
-	parser.add_argument('--bpf',type=str, default=None, action='store')
 	parser.add_argument('--xmark-mask', '-M', type=str, action='store', default="0x800001ff", help='mark mask (bits to use) default is not to use lower 9 bits and the highest')
-	parser.add_argument("--limit", action='store_true', default=False, help="limit rule matches to 1/second")
+	parser.add_argument('--limit', action='store_true', default=False, help="limit rule matches to 1/second")
+	parser.add_argument('bpf', type=str, action='store', default='', nargs='*')
 
 	args = parser.parse_args()
 	print(args)
@@ -228,10 +228,11 @@ def main():
 			mark.dst = args.destination
 
 		if args.bpf:
+			filter = args.bpf if isinstance(args.bpf, str) else ' '.join(args.bpf)
 			bpf = mark.create_match("bpf")
-			bpf.bytecode = nfbpf_compile(args.bpf)
+			bpf.bytecode = nfbpf_compile(filter)
 			comment = mark.create_match("comment")
-			comment.comment = 'bpf: "{}"'.format(args.bpf)
+			comment.comment = 'bpf: "{}"'.format(filter)
 		if args.limit:
 			limit = mark.create_match('limit')
 			limit.limit = "1/second"
