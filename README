@@ -4,6 +4,22 @@ This software allows tracing a packet through the linux kernels netfilter
 tables.
 It is meant to assist in debugging and writing iptables rules.
 
+
+THIS SOFTWARE DOES NOT WORK WITH iptables-over-nftables.
+USE xtables-monitor --trace for iptables-over-nftables.
+
+xtables-monitor --trace
+
+       1 TRACE: 2 fc475095 raw:PREROUTING:rule:0x3:CONTINUE -4 -t raw -A PREROUTING -p icmp -j TRACE
+       2 PACKET: 0 fc475095 IN=lo LL=0x3040000000000000000000000000800 SRC=127.0.0.1 DST=127.0.0.1 LEN=84 TOS=0x0 TTL=64 ID=38349DF
+       3 TRACE: 2 fc475095 raw:PREROUTING:return:
+       4 TRACE: 2 fc475095 raw:PREROUTING:policy:ACCEPT
+       5 TRACE: 2 fc475095 filter:INPUT:return:
+       6 TRACE: 2 fc475095 filter:INPUT:policy:DROP
+       7 TRACE: 2 0df9d3d8 raw:PREROUTING:rule:0x3:CONTINUE -4 -t raw -A PREROUTING -p icmp -j TRACE
+
+
+
  INSTALLATION
 
 Install
